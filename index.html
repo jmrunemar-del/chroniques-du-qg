@@ -3,67 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Les Chroniques du QG - Armée Royale</title>
+    <title>Les Chroniques du QG - Jeu Complet</title>
     <style>
         :root { --p1: #2980b9; --p2: #c0392b; --trap: #d1b3ff; --wall: #2c3e50; }
-        body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: white; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: white; margin: 0; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
         
-        #ui-layer { width: 100%; max-width: 600px; padding: 10px; text-align: center; background: #222; border-bottom: 2px solid #444; }
+        #ui-layer { width: 100%; max-width: 600px; padding: 15px; text-align: center; background: #222; border-bottom: 3px solid #444; }
         #board { 
             display: grid; grid-template-columns: repeat(8, 1fr); 
-            width: 95vw; height: 95vw; max-width: 550px; max-height: 550px;
-            border: 5px solid #333; background: #444; gap: 1px; margin-top: 10px;
+            width: 95vw; height: 95vw; max-width: 500px; max-height: 500px;
+            border: 5px solid #333; background: #444; gap: 2px; margin: 20px 0;
         }
-        .cell { background: #555; display: flex; justify-content: center; align-items: center; cursor: pointer; position: relative; border: 0.1px solid #666; }
+        .cell { background: #555; display: flex; justify-content: center; align-items: center; cursor: pointer; position: relative; font-size: 0.8rem; }
         .cell:nth-child(even) { background: #4d4d4d; }
-        .cell.is-trap { background: var(--trap) !important; opacity: 0.8; }
+        .cell.is-trap { background: var(--trap) !important; }
         .cell.is-wall { background: var(--wall) !important; border: 2px solid #000; box-sizing: border-box; }
         
         .piece { 
-            width: 90%; height: 90%; border-radius: 8px; display: flex; 
+            width: 85%; height: 85%; border-radius: 10px; display: flex; 
             flex-direction: column; justify-content: center; align-items: center; 
-            font-weight: bold; font-size: 0.6em; color: white; transition: 0.2s;
-            box-shadow: 0 4px 5px rgba(0,0,0,0.4);
+            font-weight: bold; font-size: 0.65em; color: white; text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5); border: 2px solid #fff;
         }
-        .p1 { background: var(--p1); border: 2px solid #fff; }
-        .p2 { background: var(--p2); border: 2px solid #fff; }
-        .selected { transform: scale(1.1); border: 3px solid #f1c40f !important; z-index: 10; }
-        .hp-bar { font-size: 0.8em; margin-top: 2px; background: rgba(0,0,0,0.5); padding: 1px 3px; border-radius: 3px; }
+        .p1 { background: var(--p1); }
+        .p2 { background: var(--p2); }
+        .selected { border: 3px solid #f1c40f !important; box-shadow: 0 0 15px #f1c40f; }
+        .hp-text { font-size: 0.8em; background: rgba(0,0,0,0.4); padding: 1px 2px; border-radius: 3px; margin-top: 2px; }
 
-        .controls { margin: 15px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-        button { padding: 12px 18px; border: none; border-radius: 6px; background: #8e44ad; color: white; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        button:hover { background: #9b59b6; }
-        button:disabled { background: #555; opacity: 0.5; }
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; }
+        button { padding: 12px 20px; border: none; border-radius: 8px; background: #8e44ad; color: white; cursor: pointer; font-weight: bold; }
+        button:active { transform: scale(0.95); }
         
         #modal { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.95); display: none; flex-direction: column; 
-            justify-content: center; align-items: center; z-index: 100; text-align: center;
+            background: rgba(0,0,0,0.9); display: none; flex-direction: column; 
+            justify-content: center; align-items: center; z-index: 100;
         }
     </style>
 </head>
 <body>
 
 <div id="ui-layer">
-    <h3 id="status">Chargement...</h3>
-    <div>Murs: <span id="walls">5</span> | Score IA: <span id="ia-lvl">1</span></div>
+    <h2 id="status">Chargement...</h2>
+    <div id="stats">Murs: <span id="walls">5</span> | Niveau IA: <span id="ia-lvl">1</span></div>
 </div>
 
 <div id="board"></div>
 
 <div class="controls">
-    <button id="btn-move" onclick="setMode('move')">MARCHER / ATTAQUER</button>
-    <button id="btn-wall" onclick="setMode('wall')">POSER UN MUR (5)</button>
+    <button onclick="setMode('move')">DÉPLACER / ATTAQUER</button>
+    <button onclick="setMode('wall')">POSER UN MUR</button>
 </div>
 
 <div id="modal">
-    <h1 id="modal-title">FIN DE PARTIE</h1>
+    <h1 id="modal-title"></h1>
     <p id="modal-text"></p>
-    <button onclick="location.reload()">REJOUER</button>
-    <button onclick="location.reload()" style="background:#444; margin-top:10px;">ACCUEIL</button>
+    <button onclick="location.reload()" style="padding:15px 30px; font-size:1.2em;">REJOUER</button>
 </div>
 
 <script>
+let playerName = prompt("Ton nom de guerrier :") || "Joueur";
 let mode = "place_traps";
 let wallsLeft = 5;
 let trapsLeft = 5;
@@ -73,11 +72,11 @@ let board = Array(64).fill(null);
 
 const UNITS = {
     ROI: { n: 'ROI', hp: 500, atk: 150 },
-    SOL: { n: 'SOLDAT', hp: 150, atk: 30 }, // Bonus 10% PV inclus dans les HP
+    SOL: { n: 'SOLDAT', hp: 165, atk: 30 },
     PAL: { n: 'PALADIN', hp: 200, atk: 50 },
     GLA: { n: 'GLADIA', hp: 180, atk: 70 },
     MAG: { n: 'MAGE', hp: 100, atk: 90 },
-    TOUR: { n: 'TOUR', hp: 300, atk: 0 } // Le QG
+    QG:  { n: 'QG', hp: 300, atk: 0 }
 };
 
 function init() {
@@ -89,28 +88,28 @@ function init() {
         c.onclick = () => clickCell(i);
         grid.appendChild(c);
     }
-    setupPieces();
+    setupGame();
     render();
 }
 
-function setupPieces() {
-    // JOUEUR (Lignes 6 et 7)
+function setupGame() {
+    // JOUEUR (Bleu) - Positionnement
     place(60, 'ROI', 'p1');
-    place(56, 'TOUR', 'p1');
+    place(56, 'QG', 'p1');
     [48, 49, 50, 51, 52].forEach(i => place(i, 'SOL', 'p1')); // 5 Soldats
     place(57, 'PAL', 'p1'); place(58, 'PAL', 'p1');
     place(61, 'GLA', 'p1'); place(62, 'GLA', 'p1');
     place(59, 'MAG', 'p1');
 
-    // IA (Lignes 0 et 1)
+    // IA (Rouge) - Positionnement
     place(3, 'ROI', 'p2');
-    place(7, 'TOUR', 'p2');
+    place(7, 'QG', 'p2');
     [8, 9, 10, 11, 12].forEach(i => place(i, 'SOL', 'p2')); // 5 Soldats
     place(1, 'PAL', 'p2'); place(2, 'PAL', 'p2');
     place(5, 'GLA', 'p2'); place(6, 'GLA', 'p2');
     place(4, 'MAG', 'p2');
 
-    document.getElementById('status').innerText = "Placez 5 cases violettes stratégiques";
+    document.getElementById('status').innerText = "Placez 5 pièges (Cases violettes)";
     document.getElementById('ia-lvl').innerText = iaLevel;
 }
 
@@ -125,7 +124,7 @@ function clickCell(i) {
         if(!board[i] && !cell.classList.contains('is-trap')) {
             cell.classList.add('is-trap');
             trapsLeft--;
-            if(trapsLeft <= 0) { mode = "move"; document.getElementById('status').innerText = "À vous de jouer !"; }
+            if(trapsLeft <= 0) { mode = "move"; document.getElementById('status').innerText = "À toi de jouer !"; }
             else { document.getElementById('status').innerText = `Encore ${trapsLeft} pièges...`; }
         }
         return;
@@ -137,54 +136,57 @@ function clickCell(i) {
             wallsLeft--;
             document.getElementById('walls').innerText = wallsLeft;
             render();
-            setTimeout(iaTurn, 600);
+            setTimeout(iaTurn, 500);
         }
         return;
     }
 
     if(board[i] && board[i].owner === 'p1') {
-        selectedIdx = i;
+        selectedIdx = (selectedIdx === i) ? null : i;
     } else if(selectedIdx !== null) {
-        moveOrAttack(selectedIdx, i);
+        processAction(selectedIdx, i);
         selectedIdx = null;
     }
     render();
 }
 
-function moveOrAttack(from, to) {
+function processAction(from, to) {
     const p = board[from];
     const target = board[to];
 
-    // Vérification de distance simplifiée (1 case ou L pour mage)
+    // Attaque
     if(target && target.owner === 'p2') {
         target.curHp -= p.atk;
         if(target.curHp <= 0) {
-            if(target.n === 'ROI') return victory();
+            if(target.n === 'ROI') return showEnd("VICTOIRE !", "Le Roi ennemi est mort !");
             board[to] = null;
         }
-        setTimeout(iaTurn, 600);
-    } else if(!target) {
+        setTimeout(iaTurn, 500);
+    } 
+    // Déplacement
+    else if(!target) {
         board[to] = board[from];
         board[from] = null;
         if(document.getElementById('c'+to).classList.contains('is-trap')) {
-            alert("PIÈGE ! -50 PV");
-            board[to].curHp -= 50;
+            board[to].curHp -= 60;
+            alert("MALUS ! -60 PV");
             if(board[to].curHp <= 0) board[to] = null;
         }
-        setTimeout(iaTurn, 600);
+        setTimeout(iaTurn, 500);
     }
 }
 
 function iaTurn() {
     let p2Units = [];
-    board.forEach((p, i) => { if(p && p.owner === 'p2' && p.n !== 'TOUR') p2Units.push(i); });
+    board.forEach((p, i) => { if(p && p.owner === 'p2' && p.n !== 'QG') p2Units.push(i); });
     
     if(p2Units.length > 0) {
         let idx = p2Units[Math.floor(Math.random() * p2Units.length)];
-        let next = idx + 8; // L'IA avance tout droit
-        if(next < 64 && !board[next]) {
-            board[next] = board[idx];
+        let target = idx + 8; // L'IA avance
+        if(target < 64 && !board[target]) {
+            board[target] = board[idx];
             board[idx] = null;
+            if(target > 55) showEnd("DÉFAITE...", "L'ennemi a percé tes lignes !");
         }
     }
     render();
@@ -201,4 +203,22 @@ function render() {
             } else {
                 let d = document.createElement('div');
                 d.className = `piece ${p.owner} ${i === selectedIdx ? 'selected' : ''}`;
-                d.innerHTML = `<span>${p.n}</span><div class="hp-bar">${p.curHp}
+                d.innerHTML = `<div>${p.n}</div><div class="hp-text">${p.curHp}</div>`;
+                c.appendChild(d);
+            }
+        }
+    }
+}
+
+function setMode(m) { mode = m; }
+
+function showEnd(title, text) {
+    document.getElementById('modal-title').innerText = title;
+    document.getElementById('modal-text').innerText = text;
+    document.getElementById('modal').style.display = 'flex';
+}
+
+window.onload = init;
+</script>
+</body>
+</html>
