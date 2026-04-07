@@ -3,36 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Les Chroniques du QG - Jeu Complet</title>
+    <title>Les Chroniques du QG</title>
     <style>
         :root { --p1: #2980b9; --p2: #c0392b; --trap: #d1b3ff; --wall: #2c3e50; }
-        body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: white; margin: 0; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
+        body { font-family: sans-serif; background: #1a1a1a; color: white; margin: 0; display: flex; flex-direction: column; align-items: center; }
         
-        #ui-layer { width: 100%; max-width: 600px; padding: 15px; text-align: center; background: #222; border-bottom: 3px solid #444; }
+        #ui-layer { width: 100%; max-width: 600px; padding: 10px; text-align: center; background: #222; border-bottom: 2px solid #444; }
         #board { 
             display: grid; grid-template-columns: repeat(8, 1fr); 
             width: 95vw; height: 95vw; max-width: 500px; max-height: 500px;
             border: 5px solid #333; background: #444; gap: 2px; margin: 20px 0;
         }
-        .cell { background: #555; display: flex; justify-content: center; align-items: center; cursor: pointer; position: relative; font-size: 0.8rem; }
+        .cell { background: #555; display: flex; justify-content: center; align-items: center; cursor: pointer; position: relative; min-height: 40px; }
         .cell:nth-child(even) { background: #4d4d4d; }
         .cell.is-trap { background: var(--trap) !important; }
-        .cell.is-wall { background: var(--wall) !important; border: 2px solid #000; box-sizing: border-box; }
+        .cell.is-wall { background: var(--wall) !important; border: 1px solid black; }
         
         .piece { 
-            width: 85%; height: 85%; border-radius: 10px; display: flex; 
+            width: 85%; height: 85%; border-radius: 8px; display: flex; 
             flex-direction: column; justify-content: center; align-items: center; 
-            font-weight: bold; font-size: 0.65em; color: white; text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.5); border: 2px solid #fff;
+            font-weight: bold; font-size: 0.6em; color: white; border: 1px solid #fff;
         }
         .p1 { background: var(--p1); }
         .p2 { background: var(--p2); }
-        .selected { border: 3px solid #f1c40f !important; box-shadow: 0 0 15px #f1c40f; }
-        .hp-text { font-size: 0.8em; background: rgba(0,0,0,0.4); padding: 1px 2px; border-radius: 3px; margin-top: 2px; }
+        .selected { border: 3px solid yellow !important; transform: scale(1.1); }
+        .hp { font-size: 0.8em; opacity: 0.9; }
 
         .controls { display: flex; gap: 10px; margin-bottom: 20px; }
-        button { padding: 12px 20px; border: none; border-radius: 8px; background: #8e44ad; color: white; cursor: pointer; font-weight: bold; }
-        button:active { transform: scale(0.95); }
+        button { padding: 12px 15px; border: none; border-radius: 5px; background: #8e44ad; color: white; cursor: pointer; font-weight: bold; }
         
         #modal { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
@@ -45,29 +43,26 @@
 
 <div id="ui-layer">
     <h2 id="status">Chargement...</h2>
-    <div id="stats">Murs: <span id="walls">5</span> | Niveau IA: <span id="ia-lvl">1</span></div>
+    <div>Murs: <span id="walls">5</span> | IA: <span id="ia-lvl">1</span></div>
 </div>
 
 <div id="board"></div>
 
 <div class="controls">
-    <button onclick="setMode('move')">DÉPLACER / ATTAQUER</button>
-    <button onclick="setMode('wall')">POSER UN MUR</button>
+    <button onclick="setMode('move')">DÉPLACER</button>
+    <button onclick="setMode('wall')">POSER MUR</button>
 </div>
 
 <div id="modal">
     <h1 id="modal-title"></h1>
-    <p id="modal-text"></p>
-    <button onclick="location.reload()" style="padding:15px 30px; font-size:1.2em;">REJOUER</button>
+    <button onclick="location.reload()" style="padding:15px; font-size:1.2em;">REJOUER</button>
 </div>
 
 <script>
-let playerName = prompt("Ton nom de guerrier :") || "Joueur";
 let mode = "place_traps";
 let wallsLeft = 5;
 let trapsLeft = 5;
 let selectedIdx = null;
-let iaLevel = parseInt(localStorage.getItem('qg_ia_lvl')) || 1;
 let board = Array(64).fill(null);
 
 const UNITS = {
@@ -81,6 +76,7 @@ const UNITS = {
 
 function init() {
     const grid = document.getElementById('board');
+    grid.innerHTML = '';
     for(let i=0; i<64; i++) {
         let c = document.createElement('div');
         c.className = 'cell';
@@ -93,24 +89,21 @@ function init() {
 }
 
 function setupGame() {
-    // JOUEUR (Bleu) - Positionnement
-    place(60, 'ROI', 'p1');
-    place(56, 'QG', 'p1');
-    [48, 49, 50, 51, 52].forEach(i => place(i, 'SOL', 'p1')); // 5 Soldats
+    // JOUEUR (Bleu)
+    place(60, 'ROI', 'p1'); place(56, 'QG', 'p1');
+    [48, 49, 50, 51, 52].forEach(i => place(i, 'SOL', 'p1'));
     place(57, 'PAL', 'p1'); place(58, 'PAL', 'p1');
     place(61, 'GLA', 'p1'); place(62, 'GLA', 'p1');
     place(59, 'MAG', 'p1');
 
-    // IA (Rouge) - Positionnement
-    place(3, 'ROI', 'p2');
-    place(7, 'QG', 'p2');
-    [8, 9, 10, 11, 12].forEach(i => place(i, 'SOL', 'p2')); // 5 Soldats
+    // IA (Rouge)
+    place(3, 'ROI', 'p2'); place(7, 'QG', 'p2');
+    [8, 9, 10, 11, 12].forEach(i => place(i, 'SOL', 'p2'));
     place(1, 'PAL', 'p2'); place(2, 'PAL', 'p2');
     place(5, 'GLA', 'p2'); place(6, 'GLA', 'p2');
     place(4, 'MAG', 'p2');
 
-    document.getElementById('status').innerText = "Placez 5 pièges (Cases violettes)";
-    document.getElementById('ia-lvl').innerText = iaLevel;
+    document.getElementById('status').innerText = "Placez vos 5 pièges violets";
 }
 
 function place(i, type, owner) {
@@ -118,14 +111,13 @@ function place(i, type, owner) {
 }
 
 function clickCell(i) {
-    const cell = document.getElementById('c'+i);
-
     if(mode === "place_traps") {
+        const cell = document.getElementById('c'+i);
         if(!board[i] && !cell.classList.contains('is-trap')) {
             cell.classList.add('is-trap');
             trapsLeft--;
-            if(trapsLeft <= 0) { mode = "move"; document.getElementById('status').innerText = "À toi de jouer !"; }
-            else { document.getElementById('status').innerText = `Encore ${trapsLeft} pièges...`; }
+            if(trapsLeft <= 0) { mode = "move"; document.getElementById('status').innerText = "À vous !"; }
+            else { document.getElementById('status').innerText = `Pièges: ${trapsLeft}`; }
         }
         return;
     }
@@ -142,7 +134,7 @@ function clickCell(i) {
     }
 
     if(board[i] && board[i].owner === 'p1') {
-        selectedIdx = (selectedIdx === i) ? null : i;
+        selectedIdx = i;
     } else if(selectedIdx !== null) {
         processAction(selectedIdx, i);
         selectedIdx = null;
@@ -154,22 +146,18 @@ function processAction(from, to) {
     const p = board[from];
     const target = board[to];
 
-    // Attaque
     if(target && target.owner === 'p2') {
         target.curHp -= p.atk;
         if(target.curHp <= 0) {
-            if(target.n === 'ROI') return showEnd("VICTOIRE !", "Le Roi ennemi est mort !");
+            if(target.n === 'ROI') return showWin("VICTOIRE !");
             board[to] = null;
         }
         setTimeout(iaTurn, 500);
-    } 
-    // Déplacement
-    else if(!target) {
+    } else if(!target) {
         board[to] = board[from];
         board[from] = null;
         if(document.getElementById('c'+to).classList.contains('is-trap')) {
             board[to].curHp -= 60;
-            alert("MALUS ! -60 PV");
             if(board[to].curHp <= 0) board[to] = null;
         }
         setTimeout(iaTurn, 500);
@@ -179,14 +167,11 @@ function processAction(from, to) {
 function iaTurn() {
     let p2Units = [];
     board.forEach((p, i) => { if(p && p.owner === 'p2' && p.n !== 'QG') p2Units.push(i); });
-    
     if(p2Units.length > 0) {
         let idx = p2Units[Math.floor(Math.random() * p2Units.length)];
-        let target = idx + 8; // L'IA avance
-        if(target < 64 && !board[target]) {
-            board[target] = board[idx];
+        if(idx + 8 < 64 && !board[idx+8]) {
+            board[idx+8] = board[idx];
             board[idx] = null;
-            if(target > 55) showEnd("DÉFAITE...", "L'ennemi a percé tes lignes !");
         }
     }
     render();
@@ -203,21 +188,21 @@ function render() {
             } else {
                 let d = document.createElement('div');
                 d.className = `piece ${p.owner} ${i === selectedIdx ? 'selected' : ''}`;
-                d.innerHTML = `<div>${p.n}</div><div class="hp-text">${p.curHp}</div>`;
+                d.innerHTML = `<div>${p.n}</div><div class="hp">${p.curHp}</div>`;
                 c.appendChild(d);
             }
         }
     }
 }
 
-function setMode(m) { mode = m; }
-
-function showEnd(title, text) {
-    document.getElementById('modal-title').innerText = title;
-    document.getElementById('modal-text').innerText = text;
+function showWin(t) {
+    document.getElementById('modal-title').innerText = t;
     document.getElementById('modal').style.display = 'flex';
 }
 
+function setMode(m) { mode = m; }
+
+// On lance le jeu dès que la page est chargée
 window.onload = init;
 </script>
 </body>
